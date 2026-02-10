@@ -1,28 +1,18 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: library-metrics
-  namespace: library-system
-  labels:
-    app: library-app
-spec:
-  selector:
-    app: library-app
-  ports:
-  - name: metrics
-    port: 8080
-    targetPort: 8080
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: library-app-metrics
-  namespace: library-system
-spec:
-  selector:
-    matchLabels:
-      app: library-app
-  endpoints:
-  - port: metrics
-    path: /actuator/prometheus
-    interval: 30s
+# Metrics endpoint exposed via main service at /actuator/prometheus
+# Configure Prometheus to scrape: http://library-service/actuator/prometheus
+#
+# If Prometheus Operator is installed, uncomment ServiceMonitor below:
+#
+# apiVersion: monitoring.coreos.com/v1
+# kind: ServiceMonitor
+# metadata:
+#   name: library-app-metrics
+#   namespace: library-system
+# spec:
+#   selector:
+#     matchLabels:
+#       app: library-app
+#   endpoints:
+#   - port: http
+#     path: /actuator/prometheus
+#     interval: 30s

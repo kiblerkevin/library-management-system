@@ -15,11 +15,26 @@ spec:
     spec:
       containers:
       - name: library-app
-        image: library-management:1.0.0
-        imagePullPolicy: IfNotPresent
+        image: library-management:1.0.1
+        imagePullPolicy: Never
         ports:
         - containerPort: 8080
         env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: library-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: library-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: library-config
+              key: DB_NAME
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)
         - name: SPRING_DATASOURCE_USERNAME
@@ -47,21 +62,6 @@ spec:
             secretKeyRef:
               name: library-secrets
               key: JWT_SECRET
-        - name: DB_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: library-config
-              key: DB_HOST
-        - name: DB_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: library-config
-              key: DB_PORT
-        - name: DB_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: library-config
-              key: DB_NAME
         resources:
           requests:
             memory: "512Mi"
@@ -73,7 +73,7 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 60
+          initialDelaySeconds: 180
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -81,10 +81,10 @@ spec:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 150
           periodSeconds: 5
           timeoutSeconds: 3
-          failureThreshold: 3
+          failureThreshold: 5
 ---
 apiVersion: v1
 kind: Service

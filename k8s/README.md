@@ -8,6 +8,13 @@
 
 ## Setup Local Storage (On-Prem)
 
+**For Minikube:**
+```bash
+# Minikube has 'standard' storage class by default
+kubectl get storageclass
+```
+
+**For other on-prem clusters:**
 ```bash
 # Create StorageClass for local storage
 cat <<EOF | kubectl apply -f -
@@ -18,35 +25,41 @@ metadata:
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 EOF
+
+# Create PersistentVolume
+kubectl apply -f k8s/postgres-pv.yaml
 ```
 
 ## Build Application Image
 
+**For Minikube:**
+```bash
+# Build image in Minikube's Docker daemon
+./build-minikube.sh
+```
+
+**For other Kubernetes clusters:**
 ```bash
 cd backend
 docker build -t library-management:1.0.0 .
+# Push to your registry
+docker tag library-management:1.0.0 your-registry/library-management:1.0.0
+docker push your-registry/library-management:1.0.0
+# Update k8s/library-app.yaml with your registry image
 ```
 
 ## Deploy to Kubernetes
 
 ```bash
-# Apply in order
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/redis.yaml
+# Apply all manifests
+kubectl apply -f k8s/
 
 # Wait for database to be ready
 kubectl wait --for=condition=ready pod -l app=postgres -n library-system --timeout=120s
 
 # Initialize database schema
-kubectl exec -it postgres-0 -n library-system -- psql -U library_user -d library_db -f /path/to/schema.sql
-
-# Deploy application
-kubectl apply -f k8s/library-app.yaml
-kubectl apply -f k8s/hpa.yaml
-kubectl apply -f k8s/monitoring.yaml
+kubectl cp db/Library\ DB\ Design.sql library-system/postgres-0:/tmp/schema.sql
+kubectl exec -it postgres-0 -n library-system -- psql -U library_user -d library_db -f /tmp/schema.sql
 ```
 
 ## Verify Deployment
@@ -98,10 +111,15 @@ kubectl exec -i postgres-0 -n library-system -- psql -U library_user library_db 
 ## Monitoring
 
 ```bash
-# Port-forward to access metrics
-kubectl port-forward svc/library-service -n library-system 8080:80
+# Deploy Prometheus (optional)
+kubectl apply -f k8s/prometheus.yaml
 
-# Access Prometheus metrics
+# Access Prometheus UI
+kubectl port-forward svc/prometheus -n library-system 9090:9090
+# Open http://localhost:9090
+
+# Or access metrics directly
+kubectl port-forward svc/library-service -n library-system 8080:80
 curl http://localhost:8080/actuator/prometheus
 ```
 
